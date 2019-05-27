@@ -3,42 +3,12 @@ from bs4 import BeautifulSoup as bs
 from openpyxl import workbook
 
 
-
+m = 1
 headers = {
 "user-agent":"Mozilla/5.0 (Linux; Android 6.0; Nexus 5 Build/MRA58N) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/72.0.3626.121 Mobile Safari/537.36"
 }
 
-def getHtml(ID,SD,END):
-    id = ID
-    url1 = "http://sdhq.hust.edu.cn/ICBS/PurchaseWebService.asmx/getMeterDayValue?"
 
-    parse = {
-    "AmMeter_ID":ID,
-    "startDate":SD,
-    "endDate":END
-    }
-    re = requests.get(url = url1,params = parse,headers = headers)
-    webpage = re.content
-    getData(webpage)
-
-def getData(webpage):
-    global ws
-    data = []  #  存储电量数据
-    time = []  #  存储时间
-    soup = bs(webpage,"html.parser")
-
-    for d in soup.find_all('dayvalue'):
-        da = d.get_text()
-        data.append(da)
-
-    for t in soup.find_all('curdaytime'):
-        ti = t.get_text()
-        time.append(ti)
-    for i in range(30):
-        ws.append([data[i],time[i]])
-
-SD = "2019/4/1"
-END = "2019/4/30"
 
 
     # ID6# 阳面
@@ -1686,38 +1656,91 @@ roomN27 = [
 
     ]
 
+
+def getHtml(ID,SD,END):
+    id = ID
+    url1 = "http://sdhq.hust.edu.cn/ICBS/PurchaseWebService.asmx/getMeterDayValue?"
+
+    parse = {
+    "AmMeter_ID":ID,
+    "startDate":SD,
+    "endDate":END
+    }
+    re = requests.get(url = url1,params = parse,headers = headers)
+    webpage = re.content
+    getData(webpage)
+
+def getData(webpage):
+    global ws
+    global m
+    data = []  #  存储电量数据
+    time = []  #  存储时间
+    soup = bs(webpage,"html.parser")
+    m += 1
+
+    for t in soup.find_all('curdaytime'):
+        ti = t.get_text()
+        time.append(ti)
+
+    for d in soup.find_all('dayvalue'):
+        da = float(d.get_text())
+        data.append(da)
+
+    for i in range(99):
+        if m <= 2:
+            ws.append([time[i],data[i]])
+        else:
+            ws.append([data[i]])
+
+SD = "2019/2/17"
+END = "2019/5/26"
+
 n  = -1
 rang = ['6','7','8','9','10','11','12','13','14','15','16','17','18','19','21','22','23','24','25','26','27']
 
 if __name__ == '__main__':
-    wb = workbook.Workbook()
-    ws = wb.active
 
+
+    print("Sunny side")
 #  For sunny side
     for i in rang:
         ID1 = locals()['IDS' + i ]   # A way to get variable name regularly
         room = locals()['roomS' + i]
         FileName = i + "#阳面"
         print(i)
+        wb = workbook.Workbook()
+        ws = wb.active
         for id in ID1:
             n += 1
             ws.append(["房间号"])
             ws.append([room[n]])
-            ws.append(["日期","用量"])
+            if m <= 1:
+                ws.append(["日期","用量"])
+            else:
+                ws.append(["用量"])
             getHtml(id,SD,END)
         n = -1
+        m = 1
         wb.save(FileName + ".xlsx")
+    print("Night side")
 # For night side
+    m = 1
     for i in rang:
         ID2 = locals()['IDN' + i ]   # A way to get variable name regularly
         room = locals()['roomN' + i]
         FileName = i + "#阴面"
         print(i)
+        wb = workbook.Workbook()
+        ws = wb.active
         for id in ID2:
             n += 1
             ws.append(["房间号"])
             ws.append([room[n]])
-            ws.append(["日期","用量"])
+            if m <= 1:
+                ws.append(["日期","用量"])
+            else:
+                ws.append(["用量"])
             getHtml(id,SD,END)
         n = -1
+        m = 1
         wb.save(FileName + ".xlsx")
